@@ -277,7 +277,10 @@ class TypedTextWriter:
             return
 
         try:
-            self.tt.type_character(self.current_ix, char_typed)
+            skipped_idx = self.tt.type_character(self.current_ix, char_typed)
+            # Skip over whitespaces at beginning of line
+            if skipped_idx is not None and skipped_idx != -1:
+                self.current_ix += skipped_idx
         except IndexError:
             return
 

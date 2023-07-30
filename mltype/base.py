@@ -79,6 +79,7 @@ class TypedText:
 
         self.start_ts = None
         self.end_ts = None
+        self.skipped_spaces = 0
 
     @classmethod
     def load(cls, path):
@@ -176,6 +177,10 @@ class TypedText:
         """Get the number of characters that have been typed wrongly."""
         return self._n_characters_with_status(STATUS_WRONG)
 
+    @property
+    def n_skipped_spaces(self):
+        return self.skipped_spaces
+
     def compute_accuracy(self):
         """Compute the accuracy of the typing."""
         try:
@@ -214,7 +219,7 @@ class TypedText:
 
         """
         if force_perfect:
-            return self.n_correct_characters == self.n_characters
+            return self.n_correct_characters + self.n_skipped_spaces == self.n_characters
         else:
             return (
                 self.n_correct_characters + self.n_wrong_characters
@@ -234,6 +239,13 @@ class TypedText:
         with path.open("wb") as f:
             all_obj = (self.text, self.actions, self.start_ts, self.end_ts)
             pickle.dump(all_obj, f)
+
+    def find_first_non_whitespace(self, line):
+        for index, char in enumerate(line):
+            if char not in [' ', '\t']:
+                self.skipped_spaces += index
+                return index
+        return -1  # Return -1 if no non-whitespace character is found
 
     def type_character(self, i, ch=None):
         """Type one single character.
@@ -264,6 +276,12 @@ class TypedText:
         # check if the characters agree
         if ch == self.text[i]:
             self.actions[i].append(Action(ch, STATUS_CORRECT, ts))
+            if ch == '\n':
+                # If the character is a newline, skip all whitespace characters
+                # print("Newline found")
+                new_idx = self.find_first_non_whitespace(self.text[i+1:])
+                # print(f"New index: {new_idx}")
+                return new_idx
         else:
             self.actions[i].append(Action(ch, STATUS_WRONG, ts))
 
